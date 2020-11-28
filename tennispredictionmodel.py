@@ -15,10 +15,10 @@ def predictTournament(round):
 
   prediction = predictionModel(round, 2019, "Wimbledon")
 
-  i = 0
+  r = 0
   while len(prediction) > 1:
-    i += 1
-    print("\nRound", i)
+    r += 1
+    print("\nRound", r)
     print(prediction)
     round = pd.DataFrame(np.zeros((int(len(prediction)/2),2))).astype(str)
     round.columns = ["player1", "player2"]
@@ -59,7 +59,7 @@ def predictionModel(names, year, tourney):
   #run 15 times total to capture average forest vote
   p = np.zeros((len(names)))
   for i in range(15):
-    p = np.add(p, forestClassify(pd.DataFrame(forestRegress(features1, features2, features3))))
+    p = np.add(p, forestClassify(pd.DataFrame(forestRegress(features1, features2, features3, year))))
   p /= 15
 
   #stores predictions in a dataframe of names to return
@@ -81,14 +81,15 @@ def generateFeatures(player, opponent, year, tourney, stat):
   df = pd.read_csv("tennis.csv")
   stats = pd.read_csv("stats.csv")
 
-  year1 = df["year"] == year - 1
-  year2 = df["year"] == year - 2
-  year3 = df["year"] == year - 3
-  year4 = df["year"] == year - 4
-  year5 = df["year"] == year - 5
-  past_mask = year1 | year2 | year3 | year4 | year5
-
+  yearMax = df["year"] < year
+  yearMin = df["year"] >= year - 5
+  past_mask = yearMin & yearMax
   df = df[past_mask]
+
+  yearMax = stats["year"] < year
+  yearMin = stats["year"] >= year - 5
+  past_mask = yearMin & yearMax
+  stats = stats[past_mask]
 
   playerW = df["winner_name"] == player
   playerL = df["loser_name"] == player
@@ -215,9 +216,15 @@ def generateFeatures(player, opponent, year, tourney, stat):
 
 #RANDOM FOREST 1 - REGRESSOR
 
-def forestRegress(in1, in2, in3):
+def forestRegress(in1, in2, in3, year):
   df = pd.read_csv("stats.csv")
   predicted = pd.DataFrame()
+
+  yearMax = df["year"] < year
+  yearMin = df["year"] >= year - 5
+  past_mask = yearMin & yearMax
+
+  df = df[past_mask]
 
   stats = ["2ndRnWon%", "svWon%", "1stRnWon%"]
 
