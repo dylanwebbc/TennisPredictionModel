@@ -8,29 +8,61 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 
+#ROUND ROBIN PREDICTION
+
+def roundRobin(nameList, year, tourney):
+  #Important: nameList has just one column, unlike the usual "names" used below
+  print("Round Robin")
+  df = nameList 
+  df["score"] = 0
+
+  for i in range(len(df) - 1):
+
+    #match player against players they haven't yet played
+    names = pd.DataFrame(df["name"])
+    for j in range(i + 1):
+      names = names.drop(j)
+    names.columns = ["player1"]
+    names["player2"] = df["name"].iloc[i]
+    outcome = predictionModel(names, year, tourney)
+
+    #sort results into the score column
+    for j in range(len(df) - (i + 1)):
+      for k in range(len(df)):
+        if df["name"].iloc[k] == outcome["predicted_winner"].iloc[j]:
+          df.loc[k, "score"] += 1
+
+  #print results
+  pd.set_option('display.max_rows', None)
+  df.index += 1
+  df = df.sort_values(by = "score", ascending = False)
+  print(df)
+
 #TOURNAMENT WINNER PREDICTION
 
-def predictTournament(round):
-  pd.set_option('display.max_rows', None)
+def predictTournament(round1, year, tourney, winner = False):
+  pd.set_option("display.max_rows", None)
 
-  prediction = predictionModel(round, 2019, "Wimbledon")
+  prediction = predictionModel(round1, year, tourney)
 
   r = 0
   while len(prediction) > 1:
     r += 1
-    print("\nRound", r)
-    print(prediction)
-    round = pd.DataFrame(np.zeros((int(len(prediction)/2),2))).astype(str)
-    round.columns = ["player1", "player2"]
+    if winner == False:
+      print("\nRound", r)
+      print(prediction)
+      
+    nextRound = pd.DataFrame(np.zeros((int(len(prediction)/2),2))).astype(str)
+    nextRound.columns = ["player1", "player2"]
     for i in range(len(prediction)):
       if i % 2 == 0:
-        round.loc[int(i/2), "player1"] = prediction["predicted_winner"].iloc[i]
+        nextRound.loc[int(i/2), "player1"] = prediction["predicted_winner"].iloc[i]
       else:
-        round.loc[int((i-1)/2), "player2"] = prediction["predicted_winner"].iloc[i]
+        nextRound.loc[int((i-1)/2), "player2"] = prediction["predicted_winner"].iloc[i]
 
-    prediction = predictionModel(round, 2019, "Wimbledon")
+    prediction = predictionModel(nextRound, 2019, "Wimbledon")
 
-  print("\nWinner")
+  print("\nFinal Round")
   print(prediction)
 
 #DOUBLE FOREST TENNIS PREDICTION MODEL
@@ -38,22 +70,22 @@ def predictTournament(round):
 def predictionModel(names, year, tourney):
 
   #Generate features for regressor forest
-  features1 = generateFeatures(names["player1"].iloc[0], names["player2"].iloc[0],
+  features1 = approximateFeatures(names["player1"].iloc[0], names["player2"].iloc[0],
                                year, tourney, "2ndRnWon%")
-  features2 = generateFeatures(names["player1"].iloc[0], names["player2"].iloc[0],
+  features2 = approximateFeatures(names["player1"].iloc[0], names["player2"].iloc[0],
                                year, tourney, "svWon%")
-  features3 = generateFeatures(names["player1"].iloc[0], names["player2"].iloc[0],
+  features3 = approximateFeatures(names["player1"].iloc[0], names["player2"].iloc[0],
                                year, tourney, "1stRnWon%")
   
   for i in range(1, len(names)):
-    features1 = features1.append(generateFeatures(names["player1"].iloc[i], names["player2"].iloc[i], 
-                                                  year, tourney, "2ndRnWon%"), ignore_index=True) 
+    features1 = features1.append(approximateFeatures(names["player1"].iloc[i], names["player2"].iloc[i], 
+                                                  year, tourney, "2ndRnWon%"), ignore_index = True) 
 
-    features2 = features2.append(generateFeatures(names["player1"].iloc[i], names["player2"].iloc[i], 
-                                                  year, tourney, "svWon%"), ignore_index=True) 
+    features2 = features2.append(approximateFeatures(names["player1"].iloc[i], names["player2"].iloc[i], 
+                                                  year, tourney, "svWon%"), ignore_index = True) 
 
-    features3 = features3.append(generateFeatures(names["player1"].iloc[i], names["player2"].iloc[i], 
-                                                  year, tourney, "1stRnWon%"), ignore_index=True)
+    features3 = features3.append(approximateFeatures(names["player1"].iloc[i], names["player2"].iloc[i], 
+                                                  year, tourney, "1stRnWon%"), ignore_index = True)
 
   #classifier forest takes input from regressor forest to predict the winner
   #run 15 times total to capture average forest vote
@@ -77,7 +109,7 @@ def predictionModel(names, year, tourney):
 
 #FEATURE GENERATOR
 
-def generateFeatures(player, opponent, year, tourney, stat):
+def approximateFeatures(player, opponent, year, tourney, stat):
   df = pd.read_csv("tennis.csv")
   stats = pd.read_csv("stats.csv")
 
@@ -302,7 +334,10 @@ print(predictionModel(names, 2019, "Wimbledon"))
 print(predictionModel(pd.read_csv("wimbledon2019_round1.csv"), 2019, "Wimbledon"))
 
 #Predicts entire tournament from first round using progressive predictions
-predictTournament(pd.read_csv("wimbledon2019_round1.csv"))
+predictTournament(pd.read_csv("wimbledon2019_round1.csv"), 2019, "Wimbledon")
+
+#Conducts a round robin and prints how many matches won
+roundRobin(pd.read_csv("Top30.csv"), 2020, "Australian Open")
 
 #Testing Prediction Model on 2019 (the rest of the code)
 df = pd.read_csv("tennis.csv")
@@ -327,11 +362,11 @@ for i in range(len(names)):
 mask = names["tourney"] == "Australian Open"
 results = predictionModel(names[mask], 2019, "Australian Open")
 mask = names["tourney"] == "Roland Garros"
-results = results.append(predictionModel(names[mask], 2019, "Roland Garros"), ignore_index=True)
+results = results.append(predictionModel(names[mask], 2019, "Roland Garros"), ignore_index = True)
 mask = names["tourney"] == "Wimbledon"
-results = results.append(predictionModel(names[mask], 2019, "Wimbledon"), ignore_index=True)
+results = results.append(predictionModel(names[mask], 2019, "Wimbledon"), ignore_index = True)
 mask = names["tourney"] == "US Open"
-results = results.append(predictionModel(names[mask], 2019, "US Open"), ignore_index=True)
+results = results.append(predictionModel(names[mask], 2019, "US Open"), ignore_index = True)
 
 #compare predictions to actual match results and report accuracy
 accuracy = 0
