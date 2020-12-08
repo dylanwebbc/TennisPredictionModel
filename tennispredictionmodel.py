@@ -11,10 +11,10 @@ from sklearn.model_selection import train_test_split
 #ROUND ROBIN PREDICTION
 
 def roundRobin(nameList, year, tourney):
-  #Important: nameList has just one column, unlike the usual "names" used below
   print("Round Robin")
   df = nameList 
   df["score"] = 0
+  matches = pd.DataFrame()
 
   for i in range(len(df) - 1):
 
@@ -24,15 +24,21 @@ def roundRobin(nameList, year, tourney):
       names = names.drop(j)
     names.columns = ["player1"]
     names["player2"] = df["name"].iloc[i]
-    outcome = predictionModel(names, year, tourney)
 
-    #sort results into the score column
-    for j in range(len(df) - (i + 1)):
-      for k in range(len(df)):
-        if df["name"].iloc[k] == outcome["predicted_winner"].iloc[j]:
-          df.loc[k, "score"] += 1
+    if i == 0:
+      matches = names
+    else:
+      matches = matches.append(names)
 
-  #print results
+  #predicts outcomes of all matches
+  outcome = predictionModel(matches, year, tourney)
+
+  #sort results into the score column
+  for i in range(len(outcome)):
+    for j in range(len(df)):
+      if df["name"].iloc[j] == outcome["predicted_winner"].iloc[i]:
+        df.loc[j, "score"] += 1
+
   pd.set_option('display.max_rows', None)
   df.index += 1
   df = df.sort_values(by = "score", ascending = False)
