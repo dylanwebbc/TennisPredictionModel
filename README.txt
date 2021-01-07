@@ -1,4 +1,4 @@
-A double random forest tennis prediction model boasting 63% accuracy
+A random forest tennis prediction model boasting up to 64% accuracy in predicting the winner of a given match
 Built using the scikitlearn module in python
 Utilizes data compiled by Jeff Sackman https://github.com/JeffSackmann
 
