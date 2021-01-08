@@ -1,3 +1,11 @@
+Tennis Prediction Model
+Written by Dylan Webb 
+V 1.0 -- 1/7/2021
+V 1.1 -- 1/8/2021
+  added a round robin function which takes in a single column of player names and outputs the results of a round robin tournament among them
+  added functionality for outputting just tournament winner rather than the winners of every round in the predictTournament function
+  cosmetic changes
+
 A random forest tennis prediction model boasting up to 64% accuracy in predicting the winner of a given match
 Built using the scikitlearn module in python
 Utilizes data compiled by Jeff Sackman https://github.com/JeffSackmann
