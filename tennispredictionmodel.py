@@ -8,6 +8,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 
+from tennisstatsgenerator import updateFiles
+
 #ROUND ROBIN PREDICTION
 
 def roundRobin(nameList, year, tourney):
@@ -328,7 +330,7 @@ def forestClassify(in_test):
 
   return predicted
 
-#TESTING FUNCTIONALITY
+"""#TESTING FUNCTIONALITY
 pd.set_option('display.max_rows', None)
 
 #input test matches and winner will be predicted
@@ -343,9 +345,9 @@ print(predictionModel(pd.read_csv("wimbledon2019_round1.csv"), 2019, "Wimbledon"
 predictTournament(pd.read_csv("wimbledon2019_round1.csv"), 2019, "Wimbledon")
 
 #Conducts a round robin and prints how many matches won
-roundRobin(pd.read_csv("Top30.csv"), 2020, "Australian Open")
+roundRobin(pd.read_csv("Top30.csv"), 2020, "Australian Open")"""
 
-#Testing Prediction Model on 2019 (the rest of the code)
+"""#Testing Prediction Model on 2019 (the rest of the code)
 df = pd.read_csv("tennis.csv")
 mask = df["year"] == 2019
 df = df[mask]
@@ -381,5 +383,13 @@ for i in range(len(results)):
     accuracy += 1
 accuracy /= len(results)
 
-#accuracy usually between 60% and 63%
-print("Proportion of Accurate Predictions:", accuracy)
+#accuracy usually between 60% and 64%
+print("Proportion of Accurate Predictions:", accuracy)"""
+
+"""updateFiles(2020, "Australian Open")
+updateFiles(2020, "US Open")
+updateFiles(2020, "Roland Garros")"""
+
+predictTournament(pd.read_csv("AustralianOpen2021_round1.csv"), 2021, "Australian Open")
+
+#updateFiles(2021, "Australian Open") <-- for after the AO finishes

@@ -110,103 +110,144 @@ def generateStats(player, opponent, year, stat):
 
   return results
 
-#CREATE TENNIS.CSV FILE
-#Cleans up data for calculations
-df = pd.read_csv("tennis_atp-master/atp_matches_2003.csv")
-df["year"] = 2003
-for year in range(2004,2020):
-  file = "tennis_atp-master/atp_matches_" + str(year) + ".csv"
-  
-  newdf = pd.read_csv(file)
-  newdf["year"] = year
-  df = df.append(newdf, ignore_index=True)
+def updateFiles(year, tourney, fullUpdate = False):
+  #CREATE TENNIS.CSV FILE
+  #Cleans up data for calculations
+  print("Creating tennis.csv...\n")
 
-mask1 = df["tourney_name"] == "Australian Open"
-mask2 = df["tourney_name"] == "Roland Garros"
-mask3 = df["tourney_name"] == "US Open"
-mask4 = df["tourney_name"] == "Wimbledon"
+  if fullUpdate:
+    df = pd.read_csv("tennis_atp-master/atp_matches_2003.csv")
+    df["year"] = 2003
+    for year in range(2004, year + 1):
+      file = "tennis_atp-master/atp_matches_" + str(year) + ".csv"
+      newdf = pd.read_csv(file)
+      newdf["year"] = year
+      df = df.append(newdf, ignore_index=True)
 
-mask = mask1 | mask2 | mask3 | mask4
+    mask1 = df["tourney_name"] == "Australian Open"
+    mask2 = df["tourney_name"] == "Roland Garros"
+    mask3 = df["tourney_name"] == "US Open"
+    mask4 = df["tourney_name"] == "Wimbledon"
 
-df = df[mask]
-
-#Feature engineering
-df["w_2ndIn"] = df["w_svpt"] - df["w_1stIn"]
-df["l_2ndIn"] = df["l_svpt"] - df["l_1stIn"]
-
-df["w_svWon%"] = (df["w_1stWon"] + df["w_2ndWon"]) / df["w_svpt"]
-df["l_svWon%"] = (df["l_1stWon"] + df["l_2ndWon"]) / df["l_svpt"]
-
-df["w_1stRnWon%"] = (df["l_1stIn"] - df["l_1stWon"]) / df["l_1stIn"]
-df["l_1stRnWon%"] = (df["w_1stIn"] - df["w_1stWon"]) / df["w_1stIn"]
-
-df["w_2ndRnWon%"] = (df["l_2ndIn"] - df["l_2ndWon"]) / df["l_2ndIn"]
-df["l_2ndRnWon%"] = (df["w_2ndIn"] - df["w_2ndWon"]) / df["w_1stIn"]
-
-#label encode surface
-df["surface"] = df["surface"].astype("category")
-df["surface"] = df["surface"].cat.codes
-df["surface"] /= 2
-
-#remove unecessary columns and output tennis.csv
-df = df[["year", "tourney_name", "surface", "winner_name", "loser_name",
-         "w_svWon%", "w_1stRnWon%", "w_2ndRnWon%",
-         "l_svWon%", "l_1stRnWon%", "l_2ndRnWon%"]]
-
-df.dropna(how = 'any', inplace = True)
-df.to_csv('tennis.csv', index = False)
-
-#CREATE STATS.CSV FILE
-#remove first five years for generateStats function
-year_mask = df["year"] >= 2008
-df = df[year_mask]
-
-outcome = pd.DataFrame(np.zeros((len(df),8)))
-outcome.columns = ["player1", "player2", "year", "surface",
-                   "2ndRnWon%", "svWon%", "1stRnWon%", "outcome"]
-
-#randomly rearrange data frame and assign statistics
-for i in range(len(df)):
-  outcome.loc[i, "year"] = df["year"].iloc[i]
-  outcome.loc[i, "surface"] = df["surface"].iloc[i]
-  p = np.random.random()
-  if p < .5:
-    outcome.loc[i, "outcome"] = 1
-    outcome.loc[i, "player1"] = df["winner_name"].iloc[i]
-    outcome.loc[i, "player2"] = df["loser_name"].iloc[i]
-    outcome.loc[i, "2ndRnWon%"] = df["w_2ndRnWon%"].iloc[i]
-    outcome.loc[i, "svWon%"] = df["w_svWon%"].iloc[i]
-    outcome.loc[i, "1stRnWon%"] = df["w_1stRnWon%"].iloc[i]
+    mask = mask1 | mask2 | mask3 | mask4
+    
   else:
-    outcome.loc[i, "player1"] = df["loser_name"].iloc[i]
-    outcome.loc[i, "player2"] = df["winner_name"].iloc[i]
-    outcome.loc[i, "2ndRnWon%"] = df["l_2ndRnWon%"].iloc[i]
-    outcome.loc[i, "svWon%"] = df["l_svWon%"].iloc[i]
-    outcome.loc[i, "1stRnWon%"] = df["l_1stRnWon%"].iloc[i]
+    file = "tennis_atp-master/atp_matches_" + str(year) + ".csv"
+    df = pd.read_csv(file)
+    df["year"] = year
+    mask = df["tourney_name"] == tourney
+    
+  df = df[mask]
 
-#run generate stats function on every player matchup
-stat1 = generateStats(outcome["player1"].iloc[0], outcome["player2"].iloc[0],
-                      outcome["year"].iloc[0], "2ndRnWon%")
-stat2 = generateStats(outcome["player1"].iloc[0], outcome["player2"].iloc[0],
-                      outcome["year"].iloc[0], "1stRnWon%")
-stat3 = generateStats(outcome["player1"].iloc[0], outcome["player2"].iloc[0],
-                      outcome["year"].iloc[0], "svWon%")
+  #Feature engineering
+  df["w_2ndIn"] = df["w_svpt"] - df["w_1stIn"]
+  df["l_2ndIn"] = df["l_svpt"] - df["l_1stIn"]
 
-for i in range(1,len(df)):
-  stat1 = stat1.append(generateStats(outcome["player1"].iloc[i], outcome["player2"].iloc[i], 
-                                    outcome["year"].iloc[i], "2ndRnWon%"), ignore_index = True) 
+  df["w_svWon%"] = (df["w_1stWon"] + df["w_2ndWon"]) / df["w_svpt"]
+  df["l_svWon%"] = (df["l_1stWon"] + df["l_2ndWon"]) / df["l_svpt"]
 
-  stat2 = stat2.append(generateStats(outcome["player1"].iloc[i], outcome["player2"].iloc[i], 
-                                    outcome["year"].iloc[i], "1stRnWon%"), ignore_index = True)
+  df["w_1stRnWon%"] = (df["l_1stIn"] - df["l_1stWon"]) / df["l_1stIn"]
+  df["l_1stRnWon%"] = (df["w_1stIn"] - df["w_1stWon"]) / df["w_1stIn"]
 
-  stat3 = stat3.append(generateStats(outcome["player1"].iloc[i], outcome["player2"].iloc[i], 
-                                    outcome["year"].iloc[i], "svWon%"), ignore_index = True)
+  df["w_2ndRnWon%"] = (df["l_2ndIn"] - df["l_2ndWon"]) / df["l_2ndIn"]
+  df["l_2ndRnWon%"] = (df["w_2ndIn"] - df["w_2ndWon"]) / df["w_1stIn"]
 
-#combine data frames and output stats.csv
-outcome = outcome.drop(["player1", "player2"], axis = 1)
-stats = outcome.join(stat1)
-stats = stats.join(stat2)
-stats = stats.join(stat3)
+  if fullUpdate:
+  #label encode surface
+    df["surface"] = df["surface"].astype("category")
+    df["surface"] = df["surface"].cat.codes
+    df["surface"] /= 2
+  else:
+    if tourney == "Roland Garros":
+      df["surface"] = 0
+    elif tourney == "Wimbledon":
+      df["surface"] = 0.5
+    else:
+      df["surface"] = 1
 
-stats.dropna(how = 'any', inplace = True)
-stats.to_csv('stats.csv', index = False)
+  #remove unecessary columns and output tennis.csv
+  df = df[["year", "tourney_name", "surface", "winner_name", "loser_name",
+           "w_svWon%", "w_1stRnWon%", "w_2ndRnWon%",
+           "l_svWon%", "l_1stRnWon%", "l_2ndRnWon%"]]
+
+  df.dropna(how = 'any', inplace = True)
+
+  if fullUpdate:
+    df.to_csv('tennis.csv', index = False)
+  else:
+    df_tennis = pd.read_csv("tennis.csv")
+    df_tennis = pd.concat([df_tennis, df], axis = 0)
+    df_tennis.to_csv("tennis.csv", index = False)
+
+  #CREATE STATS.CSV FILE
+  #remove first five years for generateStats function
+  print("Creating stats.csv...")
+
+  if fullUpdate:
+    mask = df["year"] >= 2008
+  else:
+    year_mask = df["year"] == year
+    tourney_mask = df["tourney_name"] == tourney
+    mask = year_mask | tourney_mask
+  df = df[mask]
+
+  outcome = pd.DataFrame(np.zeros((len(df),8)))
+  outcome.columns = ["player1", "player2", "year", "surface",
+                     "2ndRnWon%", "svWon%", "1stRnWon%", "outcome"]
+
+  #randomly rearrange data frame and assign statistics
+  print("0 / " + str(len(df)))
+  for i in range(len(df)):
+    outcome.loc[i, "year"] = df["year"].iloc[i]
+    outcome.loc[i, "surface"] = df["surface"].iloc[i]
+    p = np.random.random()
+    if p < .5:
+      outcome.loc[i, "outcome"] = 1
+      outcome.loc[i, "player1"] = df["winner_name"].iloc[i]
+      outcome.loc[i, "player2"] = df["loser_name"].iloc[i]
+      outcome.loc[i, "2ndRnWon%"] = df["w_2ndRnWon%"].iloc[i]
+      outcome.loc[i, "svWon%"] = df["w_svWon%"].iloc[i]
+      outcome.loc[i, "1stRnWon%"] = df["w_1stRnWon%"].iloc[i]
+    else:
+      outcome.loc[i, "player1"] = df["loser_name"].iloc[i]
+      outcome.loc[i, "player2"] = df["winner_name"].iloc[i]
+      outcome.loc[i, "2ndRnWon%"] = df["l_2ndRnWon%"].iloc[i]
+      outcome.loc[i, "svWon%"] = df["l_svWon%"].iloc[i]
+      outcome.loc[i, "1stRnWon%"] = df["l_1stRnWon%"].iloc[i]
+
+  #run generate stats function on every player matchup
+  stat1 = generateStats(outcome["player1"].iloc[0], outcome["player2"].iloc[0],
+                        outcome["year"].iloc[0], "2ndRnWon%")
+  stat2 = generateStats(outcome["player1"].iloc[0], outcome["player2"].iloc[0],
+                        outcome["year"].iloc[0], "1stRnWon%")
+  stat3 = generateStats(outcome["player1"].iloc[0], outcome["player2"].iloc[0],
+                        outcome["year"].iloc[0], "svWon%")
+
+  for i in range(1,len(df)):
+    print(str(i) + " / " + str(len(df)))
+    stat1 = stat1.append(generateStats(outcome["player1"].iloc[i], outcome["player2"].iloc[i], 
+                                      outcome["year"].iloc[i], "2ndRnWon%"), ignore_index = True) 
+
+    stat2 = stat2.append(generateStats(outcome["player1"].iloc[i], outcome["player2"].iloc[i], 
+                                      outcome["year"].iloc[i], "1stRnWon%"), ignore_index = True)
+
+    stat3 = stat3.append(generateStats(outcome["player1"].iloc[i], outcome["player2"].iloc[i], 
+                                      outcome["year"].iloc[i], "svWon%"), ignore_index = True)
+
+  print(str(len(df)) + " / " + str(len(df)))
+
+  #combine data frames and output stats.csv
+  outcome = outcome.drop(["player1", "player2"], axis = 1)
+  stats = outcome.join(stat1)
+  stats = stats.join(stat2)
+  stats = stats.join(stat3)
+  stats.dropna(how = 'any', inplace = True)
+
+  if fullUpdate:
+    stats.to_csv('stats.csv', index = False)
+  else:
+    df_stats = pd.read_csv("stats.csv")
+    df_stats = pd.concat([df_stats, stats], axis = 0)
+    df_stats.to_csv("stats.csv", index = False)
+    
+  print("\nDone\n")
